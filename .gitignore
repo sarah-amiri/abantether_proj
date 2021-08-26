@@ -1,0 +1,12 @@
+.idea
+.project
+.pydevproject
+
+**/*.pyc
+__pycache__/
+*.py[cod]
+
+db.sqlite3
+local_settings.py
+venv/
+uploads/
