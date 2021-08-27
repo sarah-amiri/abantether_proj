@@ -1,3 +1,27 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.translation import ugettext_lazy as _
 
-# Create your models here.
+
+class User(AbstractUser):
+    is_supporter = models.BooleanField(
+        _('supporter status'),
+        default=False,
+        help_text=_('Designates whether user can log in as site supporter.')
+    )
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, verbose_name=_('User'), on_delete=models.CASCADE)
+    mobile = models.CharField(_('user mobile'), max_length=11, blank=True)
+    is_mobile_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Profile ({self.id}) : {self.user.username}'
+
+
+class SupportMember(models.Model):
+    user = models.OneToOneField(User, verbose_name=_('User'), on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Support Member ({self.id}) : {self.user.username}'
