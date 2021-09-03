@@ -1,0 +1,5 @@
+CURRENCIES = {
+    'IRR': {},
+    'USD': {},
+    'AED': {},
+}
