@@ -9,6 +9,7 @@ from apps.currency.models import Currency
 
 User = get_user_model()
 
+
 class AccountType(models.Model):
     code = models.CharField(max_length=8, unique=True)
     name = models.CharField(_('name'), max_length=64)
@@ -44,9 +45,13 @@ class Account(models.Model):
     other_users = models.ManyToManyField(User, related_name='secondary_accounts')
     account_type = models.ForeignKey(
         AccountType, related_name='accounts', on_delete=models.CASCADE)
-    balance_limit = models.DecimalField(max_digits=4, decimal_places=2, default=D('0.00'))
+    balance_limit = models.DecimalField(
+        max_digits=4, decimal_places=2, default=D('0.00'), null=True,
+        help_text=_('Balance limit is 0.00 by default. '
+                    'Set to null, it means there is no limit for balance.'))
     balance = models.DecimalField(max_digits=6, decimal_places=2, default=D('0.00'))
-    status = models.CharField(max_length=8, choices=ACCOUNT_STATUS_CHOICES, default=STATUS_OPENED)
+    status = models.CharField(
+        max_length=8, choices=ACCOUNT_STATUS_CHOICES, default=STATUS_OPENED)
 
     created_time = models.DateTimeField(auto_now_add=True)
     modified_time = models.DateTimeField(auto_now=True)
