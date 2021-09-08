@@ -1,87 +1,128 @@
 from decimal import Decimal as D
+from enum import Enum
+import mongoengine
 
-from django.contrib.auth import get_user_model
-from django.db import models
+from django.conf import settings
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
 
-from apps.currency.models import Currency
+mongoengine.connect(
+    db=settings.MONGO_DB,
+    host=settings.MONGO_HOST,
+    username=settings.MONGO_USER,
+    password=settings.MONGO_PASS
+)
 
-User = get_user_model()
 
-
-class AccountType(models.Model):
-    code = models.CharField(max_length=8, unique=True)
-    name = models.CharField(_('name'), max_length=64)
-    currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True)
-
-    is_active = models.BooleanField(default=True)
-    created_time = models.DateTimeField(auto_now_add=True)
-    modified_time = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = (('name', 'currency'), )
+class AccountType(mongoengine.Document):
+    code = mongoengine.StringField(max_length=8, required=True, unique=True)
+    name = mongoengine.StringField(max_length=64, required=True)
+    currency = mongoengine.StringField(max_length=8, required=True, unique_with='name')
+    is_active = mongoengine.BooleanField(default=True)
+    created_time = mongoengine.DateTimeField(required=True)
 
     def __str__(self):
-        return self.code
+        return f'{self.code}: {self.name}, {self.currency}'
+
+    @classmethod
+    def create_account_type(cls, code, name, currency):
+        obj = cls(
+            code=code, name=name, currency=currency,
+            created_time=timezone.now()
+        )
+        return obj.save()
 
 
-class Account(models.Model):
+class AccountStatus(Enum):
     STATUS_ACTIVE = 'Active'
     STATUS_OPENED = 'Opened'
     STATUS_CLOSED = 'Closed'
     STATUS_FREEZE = 'Freeze'
-    ACCOUNT_STATUS_CHOICES = (
-        (STATUS_ACTIVE, _('Account is active and can be used to transfer money')),
-        (STATUS_OPENED, _('Account is opened but is not active yet')),
-        (STATUS_CLOSED, _('Account is closed and cannot be active anymore')),
-        (STATUS_FREEZE, _('Account is inactive now but will be active or closed later'))
-    )
 
-    name = models.CharField(_('name'), max_length=225, unique=True)
-    description = models.TextField(blank=True)
-    primary_user = models.ForeignKey(
-        User, related_name='primary_accounts', on_delete=models.CASCADE)
-    other_users = models.ManyToManyField(User, related_name='secondary_accounts')
-    account_type = models.ForeignKey(
-        AccountType, related_name='accounts', on_delete=models.CASCADE)
-    balance_limit = models.DecimalField(
-        max_digits=4, decimal_places=2, default=D('0.00'), null=True,
-        help_text=_('Balance limit is 0.00 by default. '
-                    'Set to null, it means there is no limit for balance.'))
-    balance = models.DecimalField(max_digits=6, decimal_places=2, default=D('0.00'))
-    status = models.CharField(
-        max_length=8, choices=ACCOUNT_STATUS_CHOICES, default=STATUS_OPENED)
 
-    created_time = models.DateTimeField(auto_now_add=True)
-    modified_time = models.DateTimeField(auto_now=True)
-    date_activated = models.DateTimeField(blank=True)
-    date_closed = models.DateTimeField(blank=True)
+class Account(mongoengine.Document):
+    name = mongoengine.StringField(max_length=225, unique=True, required=True)
+    description = mongoengine.StringField()
+    user_id = mongoengine.IntField(required=True)
+    user_username = mongoengine.StringField(max_length=64, required=True)
+    account_type = mongoengine.ReferenceField(AccountType, required=True)
+    currency = mongoengine.StringField(max_length=8, default='IRR', required=True)
+    balance_limit = mongoengine.FloatField(default=0.00)
+    balance = mongoengine.FloatField(default=0.00)
+    status = mongoengine.EnumField(AccountStatus, default=AccountStatus.STATUS_OPENED)
+
+    created_time = mongoengine.DateTimeField(required=True)
+    modified_time = mongoengine.DateTimeField(required=True)
+    date_activated = mongoengine.DateTimeField()
+    date_closed = mongoengine.DateTimeField()
 
     def __str__(self):
         return self.name
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(
+        self,
+        force_insert=False,
+        validate=True,
+        clean=True,
+        write_concern=None,
+        cascade=None,
+        cascade_kwargs=None,
+        _refs=None,
+        save_condition=None,
+        signal_kwargs=None,
+        **kwargs,
+    ):
+        if not self.name:
+            self.name = f'{self.user_username}_{self.currency}'
         self.balance = self._balance()
-        return super().save(force_insert=force_insert, force_update=force_update,
-                            using=using, update_fields=update_fields)
+        return super().save(force_insert=force_insert,
+                            validate=validate,
+                            clean=clean,
+                            write_concern=write_concern,
+                            cascade=cascade,
+                            cascade_kwargs=cascade_kwargs,
+                            _refs=_refs,
+                            save_condition=save_condition,
+                            signal_kwargs=signal_kwargs,
+                            **kwargs)
+
+    def _balance(self):
+        return self.balance
 
     @property
     def is_active(self):
-        return self.status == self.STATUS_ACTIVE
+        return self.status == AccountStatus.STATUS_ACTIVE
 
-    def activate_account(self):
-        self.status = self.STATUS_ACTIVE
+    def activate_accounts(self):
+        self.status = AccountStatus.STATUS_ACTIVE
         self.date_activated = timezone.now()
+        self.modified_time = timezone.now()
         self.save()
 
     def close_account(self):
-        self.status = self.STATUS_CLOSED
+        self.status = AccountStatus.STATUS_CLOSED
         self.date_closed = timezone.now()
+        self.modified_time = timezone.now()
         self.save()
 
-    def _balance(self):
-        # Todo: calculate balance based on transactions using aggregation
-        # for now return balance
-        return self.balance
+    def freeze_account(self):
+        self.status = AccountStatus.STATUS_FREEZE
+        self.modified_time = timezone.now()
+        self.save()
+
+    @classmethod
+    def create_account(cls, user_id, user_username,
+                       name, account_type, **kwargs):
+        obj = cls(user_id=user_id, user_username=user_username,
+                  name=name, account_type=account_type,
+                  created_time=timezone.now(), modified_time=timezone.now())
+
+        for attr in kwargs:
+            setattr(obj, attr, kwargs[attr])
+
+        print('***')
+        print(obj.balance)
+        print(type(obj.balance))
+        print(obj.balance_limit)
+        print(type(obj.balance_limit))
+
+        return obj.save()
