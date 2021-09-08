@@ -119,10 +119,4 @@ class Account(mongoengine.Document):
         for attr in kwargs:
             setattr(obj, attr, kwargs[attr])
 
-        print('***')
-        print(obj.balance)
-        print(type(obj.balance))
-        print(obj.balance_limit)
-        print(type(obj.balance_limit))
-
         return obj.save()
