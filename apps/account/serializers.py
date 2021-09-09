@@ -2,7 +2,6 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from apps.account.models import AccountType, Account, AccountStatus
-from core.utils import connect_to_mongo
 
 
 class AccountTypeSerializer(serializers.Serializer):
@@ -57,24 +56,29 @@ class AccountSerializer(serializers.Serializer):
             }
         }
 
-    def get_account_type(self, account_type_code):
-        client, db = connect_to_mongo()
-        collection = db['account_type']
-        account_type = collection.find_one({
-            'code': account_type_code
-        })
-        client.close()
-        return account_type
+    def get_code_account_type(self, account_type_code):
+        return AccountType.objects(code=account_type_code).first()
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        account_type = AccountType.objects(id=ret['account_type']).first()
+        ret['account_type'] = AccountTypeSerializer(account_type).data
+        ret['status'] = ret['status'].value
+        return ret
 
     def to_internal_value(self, data):
-        account_type_code = data.pop('account_type_code')
-        account_type_obj = self.get_account_type(account_type_code)
-        data.update({
-            'account_type': account_type_obj.get('_id'),
-            'currency': account_type_obj.get('currency'),
-            'name': f'{data["user_username"]}_{account_type_obj.get("currency")}',
-        })
-        return super().to_internal_value(data)
+        account_type_code = data.get('account_type_code')
+        account_type_obj = self.get_code_account_type(account_type_code)
+        user = self.context['request'].user
+
+        new_data = {
+            'account_type': account_type_obj.id,
+            'currency': account_type_obj.currency,
+            'name': f'{user.username}_{account_type_obj.currency}',
+            'user_id': user.pk,
+            'user_username': user.username
+        }
+        return super().to_internal_value(new_data)
 
     def create(self, validated_data):
         instance = Account.create_account(
@@ -88,3 +92,6 @@ class AccountSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         pass
+
+
+
