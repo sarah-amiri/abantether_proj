@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from django.http import Http404
@@ -14,6 +15,7 @@ from apps.account.models import Account, AccountType
 from apps.account.serializers import AccountSerializer, AccountTypeSerializer, AccountSummarySerializer
 from apps.account.utils import get_accounts_by_name
 from apps.currency.models import ExchangeRate
+from core.encoders import JSONEncoder
 
 
 class AccountListCreateAPIView(ListCreateAPIView):
@@ -141,4 +143,5 @@ class TransferAPIView(APIView):
         except Exception as e:
             return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
 
+        data = json.loads(JSONEncoder().encode(data))
         return Response(data, status=status.HTTP_201_CREATED)
