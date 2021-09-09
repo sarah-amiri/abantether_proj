@@ -5,8 +5,8 @@ from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
 from apps.account.permissions import AccountAccessPermission
-from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
+from apps.account.models import Account, AccountType
+from apps.account.serializers import AccountSerializer, AccountTypeSerializer
 
 
 class AccountListCreateAPIView(ListCreateAPIView):
@@ -56,3 +56,8 @@ class AccountRetrieveAPIView(RetrieveAPIView):
 
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class AccountTypeListCreateAPIView(ListCreateAPIView):
+    queryset = AccountType.objects.all()
+    serializer_class = AccountTypeSerializer
