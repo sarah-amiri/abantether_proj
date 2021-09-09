@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
@@ -5,6 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from apps.account.models import AccountType, Account, AccountStatus
+
+User = get_user_model()
 
 
 class AccountTypeSerializer(serializers.Serializer):
@@ -106,4 +109,9 @@ class AccountSerializer(serializers.Serializer):
         pass
 
 
-
+class AccountSummarySerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=24)
+    name = serializers.CharField(max_length=225)
+    user_id = serializers.IntegerField()
+    user_username = serializers.CharField(max_length=64)
+    currency = serializers.CharField(max_length=8)
