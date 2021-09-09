@@ -1,4 +1,7 @@
+from django.utils.translation import ugettext_lazy as _
+
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from apps.account.models import AccountType, Account, AccountStatus
@@ -56,6 +59,13 @@ class AccountSerializer(serializers.Serializer):
             }
         }
 
+    def validate_name(self, name):
+        try:
+            Account.objects(name=name)[0]
+        except IndexError:
+            return name
+        raise ValidationError(_('Account with that name already exists'))
+
     def get_code_account_type(self, account_type_code):
         return AccountType.objects(code=account_type_code).first()
 
@@ -72,12 +82,14 @@ class AccountSerializer(serializers.Serializer):
         user = self.context['request'].user
 
         new_data = {
-            'account_type': account_type_obj.id,
-            'currency': account_type_obj.currency,
-            'name': f'{user.username}_{account_type_obj.currency}',
+            'account_type': account_type_obj.id if account_type_obj else None,
+            'currency': account_type_obj.currency if account_type_obj else None,
             'user_id': user.pk,
             'user_username': user.username
         }
+        new_data.update({
+            'name': f'{user.username}_{new_data["currency"]}',
+        })
         return super().to_internal_value(new_data)
 
     def create(self, validated_data):
