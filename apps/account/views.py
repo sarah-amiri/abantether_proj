@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
-from apps.account.serializers import Account
+from apps.account.permissions import AccountAccessPermission
+from apps.account.models import Account
 from apps.account.serializers import AccountSerializer
 
 
@@ -32,13 +33,9 @@ class AccountListCreateAPIView(ListCreateAPIView):
 
 class AccountRetrieveAPIView(RetrieveAPIView):
     lookup_field = 'account_id'
+    permission_classes = [AccountAccessPermission, ]
+    queryset = Account.objects.all()
     serializer_class = AccountSerializer
-
-    def get_queryset(self):
-        queryset = Account.objects.all()
-        if not self.request.user.is_common_user:
-            return queryset
-        return queryset(user_id=self.request.user.id)
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
