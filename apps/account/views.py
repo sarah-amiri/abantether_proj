@@ -8,12 +8,12 @@ from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.account.facade import transfer
 from apps.account.permissions import AccountAccessPermission
 from apps.account.models import Account, AccountType
 from apps.account.serializers import AccountSerializer, AccountTypeSerializer, AccountSummarySerializer
 from apps.account.utils import get_accounts_by_name
 from apps.currency.models import ExchangeRate
-from core.utils import connect_to_mongo
 
 
 class AccountListCreateAPIView(ListCreateAPIView):
@@ -79,14 +79,16 @@ class TransferAPIView(APIView):
             message = 'Either source account or destination account name must be provided'
             return None, None, message
 
-        source_account, destination_account = get_accounts_by_name(source_account_name, destination_account_name)
+        source_account, destination_account = get_accounts_by_name(source_account_name,
+                                                                   destination_account_name)
         if not source_account or not destination_account:
             message = 'Source account or destination account does not exists'
 
         return source_account, destination_account, message
 
     def get_transfer_type(self):
-        if self.request.data.get('source_account') and self.request.data.get('destination_account'):
+        if (self.request.data.get('source_account') and
+                self.request.data.get('destination_account')):
             return 'transfer'
         elif self.request.data.get('source_account'):
             return 'withdraw'
@@ -109,7 +111,8 @@ class TransferAPIView(APIView):
         if message:
             return Response(dict(message=message),
                             status=status.HTTP_400_BAD_REQUEST)
-        source_currency, destination_currency = source_account.currency, destination_account.currency
+        source_currency, destination_currency = (source_account.currency,
+                                                 destination_account.currency)
         rate = ExchangeRate.get_rate(source_currency, destination_currency)
 
         amount, message = self.get_amount()
@@ -133,9 +136,9 @@ class TransferAPIView(APIView):
             'payment_info': request.data.get('payment_info')
         }
 
-        client, db = connect_to_mongo()
-        collection = db['transfer']
-        collection.insert(data)
-        client.close()
+        try:
+            transfer(data)
+        except Exception as e:
+            return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_201_CREATED)
