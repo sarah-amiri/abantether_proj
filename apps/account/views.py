@@ -9,6 +9,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.account.exceptions import AccountsInvalidException, NotFoundAccountException, AmountInvalidException
 from apps.account.facade import transfer
 from apps.account.permissions import AccountAccessPermission
 from apps.account.models import Account, AccountType
@@ -74,19 +75,17 @@ class AccountTypeListCreateAPIView(ListCreateAPIView):
 
 class TransferAPIView(APIView):
     def get_accounts(self):
-        message = None
         source_account_name = self.request.data.get('source_account')
         destination_account_name = self.request.data.get('destination_account')
         if not (source_account_name or destination_account_name):
-            message = 'Either source account or destination account name must be provided'
-            return None, None, message
+            raise AccountsInvalidException('Either source account or destination account name must be provided')
 
         source_account, destination_account = get_accounts_by_name(source_account_name,
                                                                    destination_account_name)
         if not source_account or not destination_account:
-            message = 'Source account or destination account does not exists'
+            raise NotFoundAccountException('Source account or destination account does not exists')
 
-        return source_account, destination_account, message
+        return source_account, destination_account
 
     def get_transfer_type(self):
         if (self.request.data.get('source_account') and
@@ -98,29 +97,26 @@ class TransferAPIView(APIView):
 
     def get_amount(self):
         amount = self.request.data.get('amount')
-        if not amount:
-            message = 'Amount must be provided'
-            return amount, message
-
-        amount = float(amount)
-        if amount <= 0:
-            message = 'Amount must be a positive number'
-            return amount, message
-        return amount, None
+        if not amount or float(amount) <= 0:
+            raise AmountInvalidException('Amount must be a positive number')
+        return float(amount)
 
     def post(self, request, *args, **kwargs):
-        source_account, destination_account, message = self.get_accounts()
-        if message:
-            return Response(dict(message=message),
-                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            source_account, destination_account = self.get_accounts()
+        except AccountsInvalidException as e:
+            return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
+        except NotFoundAccountException as e:
+            return Response(dict(message=str(e)), status=status.HTTP_404_NOT_FOUND)
+
         source_currency, destination_currency = (source_account.currency,
                                                  destination_account.currency)
         rate = ExchangeRate.get_rate(source_currency, destination_currency)
 
-        amount, message = self.get_amount()
-        if message:
-            return Response(dict(message=message),
-                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            amount = self.get_amount()
+        except AmountInvalidException as e:
+            return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
 
         data = {
             'source_account': AccountSummarySerializer(source_account).data,
