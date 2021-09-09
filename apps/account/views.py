@@ -141,4 +141,4 @@ class TransferAPIView(APIView):
         except Exception as e:
             return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(data, status=status.HTTP_201_CREATED)
