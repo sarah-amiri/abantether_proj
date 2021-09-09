@@ -1,10 +1,9 @@
 from django.urls import path
 
-from apps.account.views import AccountCreateAPIView
+from apps.account.views import AccountListCreateAPIView
 
 urlpatterns = [
-    path('account/', AccountCreateAPIView.as_view(), name='account-create'),
-    # path('accounts/'),
+    path('account/', AccountListCreateAPIView.as_view(), name='account-create-list'),
     # path('accounts/<string:currency>/'),
     # path('accounts/<int:user_id>/transactions/'),
     # path('accounts/<int:user_id>/transfers/'),
