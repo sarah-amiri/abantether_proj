@@ -113,5 +113,6 @@ class AccountSummarySerializer(serializers.Serializer):
     id = serializers.CharField(max_length=24)
     name = serializers.CharField(max_length=225)
     user_id = serializers.IntegerField()
-    user_username = serializers.CharField(max_length=64)
     currency = serializers.CharField(max_length=8)
+    balance = serializers.FloatField()
+    balance_limit = serializers.FloatField()
