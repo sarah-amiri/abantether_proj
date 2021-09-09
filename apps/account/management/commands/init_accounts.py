@@ -32,7 +32,7 @@ class Command(BaseCommand):
             user_username='unpaid',
             account_type=account_type,
             currency=currency,
-            balance_limit=None,
+            balance_limit=-1,
             created_time=timezone.now(),
             modified_time=timezone.now()
         )
