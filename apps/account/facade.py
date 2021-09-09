@@ -3,7 +3,12 @@ from django.utils.translation import ugettext_lazy as _
 
 from core.utils import connect_to_mongo
 
-from apps.account.names import TRANSFER_COLLECTION, TRANSACTION_COLLECTION
+from apps.account.exceptions import (
+    AccountException, InsufficientBalanceException
+)
+from apps.account.names import (
+    TRANSFER_COLLECTION, TRANSACTION_COLLECTION
+)
 
 
 def transfer(data):
@@ -12,10 +17,12 @@ def transfer(data):
     amount = data.get('amount')
 
     if source.get('id') == destination.get('id'):
-        raise Exception(_('Source account and destination account must be different'))
+        raise AccountException(
+            _('Source account and destination account must be different'))
 
     if source.get('balance') - amount < 0 and source.get('balance_limit') != -1:
-        raise Exception(_('There is not sufficient money in source account'))
+        raise InsufficientBalanceException(
+            _('There is not sufficient money in source account'))
 
     client, db = connect_to_mongo()
 
