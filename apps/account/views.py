@@ -23,6 +23,6 @@ class AccountListCreateAPIView(ListCreateAPIView):
         if currency:
             accounts = accounts(currency=currency)
 
-        if self.request.user.is_superuser or self.request.user.is_supporter:
-            return accounts
-        return accounts(user_id=self.request.user.id)
+        if self.request.user.is_common_user:
+            return accounts(user_id=self.request.user.id)
+        return accounts

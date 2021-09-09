@@ -10,6 +10,10 @@ class User(AbstractUser):
         help_text=_('Designates whether user can log in as site supporter.')
     )
 
+    @property
+    def is_common_user(self):
+        return not self.is_supporter and not self.is_superuser
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User, verbose_name=_('User'), on_delete=models.CASCADE)
