@@ -34,7 +34,8 @@ class Command(BaseCommand):
             currency=currency,
             balance_limit=-1,
             created_time=timezone.now(),
-            modified_time=timezone.now()
+            modified_time=timezone.now(),
+            status='Active'
         )
         account.save()
 
