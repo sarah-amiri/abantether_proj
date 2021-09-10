@@ -20,7 +20,7 @@ def transfer(source_account, destination_account, data):
         raise AccountException(
             _('Source account and destination account must be different'))
 
-    if source.get('balance') - amount < 0 and source.get('balance_limit') != -1:
+    if source.get('balance') - amount < 0 and not source_account.is_initial_account:
         raise InsufficientBalanceException(
             _('There is not sufficient money in source account'))
 

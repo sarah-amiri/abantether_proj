@@ -115,4 +115,3 @@ class AccountSummarySerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     currency = serializers.CharField(max_length=8)
     balance = serializers.FloatField()
-    balance_limit = serializers.FloatField()
