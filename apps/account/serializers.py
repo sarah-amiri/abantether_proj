@@ -115,3 +115,29 @@ class AccountSummarySerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     currency = serializers.CharField(max_length=8)
     balance = serializers.FloatField()
+
+
+class TransferSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    source_account = AccountSummarySerializer()
+    destination_account = AccountSummarySerializer()
+    amount = serializers.FloatField()
+    source_currency = serializers.CharField(max_length=6)
+    destination_currency = serializers.CharField(max_length=6)
+    rate = serializers.FloatField()
+    transfer_type = serializers.CharField(max_length=12)
+    description = serializers.CharField()
+    user = serializers.IntegerField()
+    reference = serializers.CharField(max_length=36)
+    created_time = serializers.DateTimeField()
+    payment_type = serializers.CharField(max_length=24)
+    payment_info = serializers.DictField()
+
+    def get_id(self, instance):
+        return str(instance.get('_id'))
+
+    def create(self, validated_data):
+        pass
+
+    def update(self, instance, validated_data):
+        pass

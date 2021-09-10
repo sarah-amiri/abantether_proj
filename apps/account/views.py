@@ -10,12 +10,20 @@ from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.account.exceptions import AccountsInvalidException, NotFoundAccountException, AmountInvalidException
+from apps.account.exceptions import (
+    AccountsInvalidException,
+    NotFoundAccountException,
+    AmountInvalidException)
 from apps.account.facade import transfer
+from apps.account.names import TRANSFER_COLLECTION
 from apps.account.permissions import AccountAccessPermission
 from apps.account.models import Account, AccountType
-from apps.account.serializers import AccountSerializer, AccountTypeSerializer, AccountSummarySerializer
-from apps.account.utils import get_accounts_by_name
+from apps.account.serializers import (
+    AccountSerializer,
+    AccountTypeSerializer,
+    AccountSummarySerializer,
+    TransferSerializer)
+from apps.account.utils import get_accounts_by_name, retrieve_from_mongo
 from apps.currency.models import ExchangeRate
 from core.encoders import JSONEncoder
 
@@ -149,3 +157,17 @@ class TransferAPIView(APIView):
 
         data = json.loads(JSONEncoder().encode(data))
         return Response(data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_common_user:
+            options = {'$or': [{'source_account.user_id': user.id},
+                               {'destination_account.user_id': user.id}]}
+        else:
+            options = {}
+        return retrieve_from_mongo(TRANSFER_COLLECTION, **options)
+
+    def get(self, request):
+        documents = self.get_queryset()
+        serializer = TransferSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
