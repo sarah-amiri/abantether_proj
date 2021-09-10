@@ -7,7 +7,8 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
+from rest_framework.generics import (
+    ListCreateAPIView, RetrieveUpdateAPIView)
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -18,7 +19,7 @@ from apps.account.exceptions import (
     AmountInvalidException)
 from apps.account.facade import transfer
 from apps.account.permissions import AccountAccessPermission
-from apps.account.models import Account, AccountType
+from apps.account.models import Account, AccountType, AccountStatus
 from apps.account.serializers import (
     AccountSerializer,
     AccountTypeSerializer,
@@ -51,11 +52,12 @@ class AccountListCreateAPIView(ListCreateAPIView):
         return accounts
 
 
-class AccountRetrieveAPIView(RetrieveAPIView):
+class AccountRetrieveUpdateAPIView(RetrieveUpdateAPIView):
     lookup_field = 'account_id'
     permission_classes = [AccountAccessPermission, ]
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
+    ACCEPTABLE_STATUS = [status.value for status in AccountStatus]
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
@@ -76,6 +78,28 @@ class AccountRetrieveAPIView(RetrieveAPIView):
 
         self.check_object_permissions(self.request, obj)
         return obj
+
+    def patch(self, request, *args, **kwargs):
+        new_status = request.data.get('status')
+
+        if not new_status or new_status.title() not in self.ACCEPTABLE_STATUS:
+            return Response(dict(message=_('New status must provided correctly')),
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if new_status.title() == AccountStatus.STATUS_OPENED.value:
+            return Response(dict(message=_('Account cannot be open again')),
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        instance = self.get_object()
+        if new_status == AccountStatus.STATUS_ACTIVE.value:
+            instance.activate_account()
+        elif new_status == AccountStatus.STATUS_CLOSED.value:
+            instance.close_account()
+        else:
+            instance.freeze_account()
+
+        serializer = AccountSerializer(instance)
+        return Response(serializer.data)
 
 
 class AccountTypeListCreateAPIView(ListCreateAPIView):
