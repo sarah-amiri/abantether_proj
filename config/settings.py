@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.currency',
     'apps.account',
+    'apps.payment',
     'core',
 ]
 
