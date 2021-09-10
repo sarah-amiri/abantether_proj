@@ -88,7 +88,8 @@ class TransferAPIView(APIView):
             raise NotFoundAccountException(_('Source account or destination '
                                              'account does not exists'))
 
-        if not source_account.is_initial_account and source_account.has_access(self.request.user):
+        if not (source_account.is_initial_account or
+                source_account.has_access(self.request.user)):
             raise AccountsInvalidException(_('You don\'t have permission '
                                              'to complete this transfer'))
 
