@@ -10,12 +10,12 @@ from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.account import names
 from apps.account.exceptions import (
     AccountsInvalidException,
     NotFoundAccountException,
     AmountInvalidException)
 from apps.account.facade import transfer
-from apps.account.names import TRANSFER_COLLECTION, TRANSACTION_COLLECTION
 from apps.account.permissions import AccountAccessPermission
 from apps.account.models import Account, AccountType
 from apps.account.serializers import (
@@ -82,7 +82,22 @@ class AccountTypeListCreateAPIView(ListCreateAPIView):
     serializer_class = AccountTypeSerializer
 
 
-class TransferAPIView(APIView):
+class DocumentAPIView(APIView):
+    def get_options(self):
+        user = self.request.user
+        if user.is_common_user:
+            options = {'$or': [{'source_account.user_id': user.id},
+                               {'destination_account.user_id': user.id}]}
+        else:
+            options = {}
+        return options
+
+    def get_documents(self, collection_name):
+        options = self.get_options()
+        return retrieve_from_mongo(collection_name, **options)
+
+
+class TransferAPIView(DocumentAPIView):
     def get_accounts(self):
         source_account_name = self.request.data.get('source_account')
         destination_account_name = self.request.data.get('destination_account')
@@ -158,32 +173,14 @@ class TransferAPIView(APIView):
         data = json.loads(JSONEncoder().encode(data))
         return Response(data, status=status.HTTP_201_CREATED)
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_common_user:
-            options = {'$or': [{'source_account.user_id': user.id},
-                               {'destination_account.user_id': user.id}]}
-        else:
-            options = {}
-        return retrieve_from_mongo(TRANSFER_COLLECTION, **options)
-
     def get(self, request):
-        documents = self.get_queryset()
+        documents = self.get_documents(names.TRANSFER_COLLECTION)
         serializer = TransferSerializer(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class TransactionAPIView(APIView):
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_common_user:
-            options = {'$or': [{'source_account.user_id': user.id},
-                               {'destination_account.user_id': user.id}]}
-        else:
-            options = {}
-        return retrieve_from_mongo(TRANSACTION_COLLECTION, **options)
-
+class TransactionAPIView(DocumentAPIView):
     def get(self, request):
-        documents = self.get_queryset()
+        documents = self.get_documents(names.TRANSACTION_COLLECTION)
         serializer = TransactionSerializer(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
