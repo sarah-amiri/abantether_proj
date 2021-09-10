@@ -142,7 +142,7 @@ class TransferAPIView(APIView):
         }
 
         try:
-            transfer(data)
+            transfer(source_account, destination_account, data)
         except Exception as e:
             return Response(dict(message=str(e)), status=status.HTTP_400_BAD_REQUEST)
 

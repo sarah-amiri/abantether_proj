@@ -1,4 +1,3 @@
-from decimal import Decimal as D
 from enum import Enum
 import mongoengine
 
@@ -86,7 +85,8 @@ class Account(mongoengine.Document):
                             **kwargs)
 
     def _balance(self):
-        return self.balance
+        from apps.account.utils import find_account_balance
+        return find_account_balance(self.name)
 
     @property
     def is_active(self):

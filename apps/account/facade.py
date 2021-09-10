@@ -11,7 +11,7 @@ from apps.account.names import (
 )
 
 
-def transfer(data):
+def transfer(source_account, destination_account, data):
     source = data.get('source_account')
     destination = data.get('destination_account')
     amount = data.get('amount')
@@ -46,5 +46,8 @@ def transfer(data):
     transaction_collection.insert_many([source_transaction, destination_transaction])
 
     client.close()
+
+    source_account.save()
+    destination_account.save()
 
     return transfer_id
