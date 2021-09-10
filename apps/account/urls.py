@@ -1,11 +1,9 @@
 from django.urls import path
 
 from apps.account.views import (
-    AccountListCreateAPIView,
-    AccountRetrieveAPIView,
-    AccountTypeListCreateAPIView,
-    TransferAPIView,
-    TransactionAPIView
+    AccountListCreateAPIView, AccountRetrieveAPIView, AccountTypeListCreateAPIView,
+    transfer_view, transaction_view, transfer_detail_view, transfer_transactions_view,
+    transaction_detail_view
 )
 
 urlpatterns = [
@@ -16,9 +14,16 @@ urlpatterns = [
     # path('accounts/<int:user_id>/transactions/'),
     # path('accounts/<int:user_id>/transfers/'),
     #
-    path('transfer/', TransferAPIView.as_view(), name='transfer'),
-    path('transaction/', TransactionAPIView.as_view(), name='transaction'),
-    # path('transaction/<transaction_id>/'),
-    # path('transfer/<transfer_id>/'),
+    path('transfer/', transfer_view, name='transfer'),
+    path('transaction/', transaction_view, name='transaction'),
+    path('transaction/<str:transaction_id>/',
+         transaction_detail_view,
+         name='transaction-detail'),
+    path('transfer/<str:transfer_id>/',
+         transfer_detail_view,
+         name='transfer-detail'),
+    path('transfer/<str:transfer_id>/transactions/',
+         transfer_transactions_view,
+         name='transfer-transactions'),
     # path('transfer/<transaction_id>/transactions/')
 ]

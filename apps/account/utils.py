@@ -53,7 +53,7 @@ def find_account_balance(account_name):
         return 0
 
 
-def retrieve_from_mongo(collection_name, **options):
+def find_documents_in_mongo(collection_name, **options):
     client, db = connect_to_mongo()
     collection = db[collection_name]
     results = collection.find(options)
