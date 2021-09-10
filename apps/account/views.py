@@ -1,16 +1,14 @@
 import json
 import uuid
-
 from bson import ObjectId
+
 from django.http import Http404
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import status
-from rest_framework.decorators import action
 from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from apps.account import names
@@ -241,8 +239,41 @@ class TransactionDetailAPIView(DocumentAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class AccountTransfersAPIView(DocumentAPIView):
+    permission_classes = [AccountAccessPermission]
+
+    def get_options(self):
+        options = super().get_options()
+        options.update(
+            {'$or': [{'source_account.id': self.kwargs.get('account_id')},
+                     {'destination_account.id': self.kwargs.get('account_id')}]})
+        return options
+
+    def check_account(self):
+        account_id = self.kwargs.get('account_id')
+        account = Account.objects(id=ObjectId(account_id)).first()
+        if not account:
+            raise NotFoundAccountException(_('Account with this id not found'))
+        return account
+
+    def list_transfers(self, request, account_id):
+        try:
+            account = self.check_account()
+        except NotFoundAccountException as e:
+            return Response(dict(message=str(e)),
+                            status=status.HTTP_404_NOT_FOUND)
+
+        self.check_object_permissions(request, account)
+
+        documents = self.get_documents(names.TRANSFER_COLLECTION)
+
+        serializer = TransferSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 transfer_view = TransferAPIView.as_view({'get': 'get', 'post': 'post'})
 transaction_view = TransactionAPIView.as_view({'get': 'get'})
 transfer_detail_view = TransferDetailAPIView.as_view({'get': 'get_detail'})
 transfer_transactions_view = TransferDetailAPIView.as_view({'get': 'get_transactions'})
 transaction_detail_view = TransactionDetailAPIView.as_view({'get': 'get_detail'})
+account_transfer_view = AccountTransfersAPIView.as_view({'get': 'list_transfers'})
