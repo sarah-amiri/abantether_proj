@@ -141,3 +141,14 @@ class TransferSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         pass
+
+
+class TransactionSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    transfer = serializers.CharField(max_length=12)
+    account = AccountSummarySerializer()
+    amount = serializers.FloatField()
+    created_time = serializers.DateTimeField()
+
+    def get_id(self, instance):
+        return str(instance.get('_id'))

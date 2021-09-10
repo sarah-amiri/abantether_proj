@@ -5,6 +5,7 @@ from apps.account.views import (
     AccountRetrieveAPIView,
     AccountTypeListCreateAPIView,
     TransferAPIView,
+    TransactionAPIView
 )
 
 urlpatterns = [
@@ -16,8 +17,7 @@ urlpatterns = [
     # path('accounts/<int:user_id>/transfers/'),
     #
     path('transfer/', TransferAPIView.as_view(), name='transfer'),
-    # path('transactions/'),
-    # path('transfers/'),
+    path('transaction/', TransactionAPIView.as_view(), name='transaction'),
     # path('transaction/<transaction_id>/'),
     # path('transfer/<transfer_id>/'),
     # path('transfer/<transaction_id>/transactions/')
