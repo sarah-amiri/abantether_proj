@@ -3,6 +3,7 @@ import uuid
 
 from django.http import Http404
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
@@ -78,12 +79,18 @@ class TransferAPIView(APIView):
         source_account_name = self.request.data.get('source_account')
         destination_account_name = self.request.data.get('destination_account')
         if not (source_account_name or destination_account_name):
-            raise AccountsInvalidException('Either source account or destination account name must be provided')
+            raise AccountsInvalidException(_('Either source account or destination '
+                                             'account name must be provided'))
 
         source_account, destination_account = get_accounts_by_name(source_account_name,
                                                                    destination_account_name)
         if not source_account or not destination_account:
-            raise NotFoundAccountException('Source account or destination account does not exists')
+            raise NotFoundAccountException(_('Source account or destination '
+                                             'account does not exists'))
+
+        if not source_account.is_initial_account and source_account.has_access(self.request.user):
+            raise AccountsInvalidException(_('You don\'t have permission '
+                                             'to complete this transfer'))
 
         return source_account, destination_account
 

@@ -92,6 +92,13 @@ class Account(mongoengine.Document):
     def is_active(self):
         return self.status == AccountStatus.STATUS_ACTIVE
 
+    @property
+    def is_initial_account(self):
+        return self.balance_limit < 0
+
+    def has_access(self, user):
+        return self.user_id == user.id or not user.is_common_user
+
     def activate_accounts(self):
         self.status = AccountStatus.STATUS_ACTIVE
         self.date_activated = timezone.now()
