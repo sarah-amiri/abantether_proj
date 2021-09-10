@@ -99,7 +99,7 @@ class Account(mongoengine.Document):
     def has_access(self, user):
         return self.user_id == user.id or not user.is_common_user
 
-    def activate_accounts(self):
+    def activate_account(self):
         self.status = AccountStatus.STATUS_ACTIVE
         self.date_activated = timezone.now()
         self.modified_time = timezone.now()
